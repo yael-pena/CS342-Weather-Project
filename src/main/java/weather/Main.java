@@ -95,23 +95,6 @@ public class Main {
     // Could have everything stored in the cloud instead of client side that way easily referenceable
     
 
-    // This is where the JSON string is being parsed and seeing what is there
-    // Using REGEX, look for the pattern, looking for temperature_2m, and then give me this ______
-
-    static double parseTemperature(String json) {
-        Pattern pattern = Pattern.compile("\"temperature_2m\":\\s*([0-9.-]+)");
-        Matcher matcher = pattern.matcher(json);
-        if (matcher.find()) { // If a match was found, we will return that value, parsed as a double from a string
-            return Double.parseDouble(matcher.group(1));
-        }
-
-        // Default Starter Code Solution if Temp not found: Returns 72.0
-        // FIXME: look at how to deal with instances when not found
-        // TODO: The final project must replace this silent fallback
-        // with an appropriate error-handling strategy.
-        return 72.0;
-    }
-
     static void renderBar(String city, double temp) {
         System.out.printf("%-15s | %5.1f°F [", city, temp);
         int barLength = (int) Math.max(0, temp / 2);
