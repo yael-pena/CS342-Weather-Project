@@ -16,42 +16,49 @@ public class OpenMeteoWeatherProvider implements WeatherDataProvider {
 
     public WeatherData getCurrentWeather(Location location) {
         try (
-                HttpClient client = HttpClient.newHttpClient()) {
-                String url = "https://api.open-meteo.com/v1/forecast?latitude=" + location.lat()
-                        + "&longitude=" + location.lon()
-                        + "&current=temperature_2m,relative_humidity_2m,wind_speed_10m" // requests temp, humidity, and wind speed
-                        + "&temperature_unit=fahrenheit" // requests temperature in fahrenheit
-                        + "&wind_speed_unit=mph"; // requests wind speed in mph
+            HttpClient client = HttpClient.newHttpClient()) {
+            String url = "https://api.open-meteo.com/v1/forecast?latitude=" + location.lat()
+                    + "&longitude=" + location.lon()
+                    + "&current=temperature_2m,relative_humidity_2m,wind_speed_10m" // requests temp, humidity, and wind speed
+                    + "&temperature_unit=fahrenheit" // requests temperature in fahrenheit
+                    + "&wind_speed_unit=mph"; // requests wind speed in mph
 
 
-                // Takes request and builds to the proper format
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(url))
-                        .GET()
-                        .build();
+            // Takes request and builds to the proper format
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
 
-                // This is where we get the response after sending it to OpenMedia
-                // Will come back in JSON format
-                HttpResponse<String> response =
-                        client.send(request, HttpResponse.BodyHandlers.ofString());
+            // This is where we get the response after sending it to OpenMedia
+            // Will come back in JSON format
+            HttpResponse<String> response =
+                    client.send(request, HttpResponse.BodyHandlers.ofString());
 
-                // Means we have an actual response
-                // Not guaranteed a JSON string that has the values you want will be returned
-                // Here we're checking that they sent a valid string
-                if (response.statusCode() == 200) {
-                    double temp = parseTemperature(response.body());
-                    double humid = parseHumidity(response.body());
-                    double windSpeed = parseWindSpeed(response.body());
-                    return new WeatherData(temp, humid, windSpeed);
-                } else {
-                    println("⚠️ " + location.city()
-                            + " API Error: Code " + response.statusCode()); //
-                }
+            // Means we have an actual response
+            // Not guaranteed a JSON string that has the values you want will be returned
+            // Here we're checking if they sent an invalid string
+
+            if (response.statusCode() != 200) {
+                throw new IllegalStateException(
+                        "Open-Meteo API error: HTTP " + response.statusCode()
+                );
+            }
+                double temp = parseTemperature(response.body());
+                double humid = parseHumidity(response.body());
+                double windSpeed = parseWindSpeed(response.body());
+
+                return new WeatherData(temp, humid, windSpeed);
+        } catch (IllegalStateException e) {
+            // An error that our provider intentionally detected
+            throw e;
 
         } catch (Exception e) {
-            println("❌ Operational Error: " + e.getMessage());
+            // An unexpected error while trying to retrieve the weather
+            throw new IllegalStateException(
+                    "Unable to retrieve weather data: " + e.getMessage(), e
+            );
         }
-        return new WeatherData(0.0, 0.0, 0.0); //placeholder
     }
 
     static double parseTemperature(String json) {
@@ -61,11 +68,7 @@ public class OpenMeteoWeatherProvider implements WeatherDataProvider {
             return Double.parseDouble(matcher.group(1));
         }
 
-        // Default Starter Code Solution if Temp not found: Returns 72.0
-        // FIXME: look at how to deal with instances when not found
-        // TODO: The final project must replace this silent fallback
-        // with an appropriate error-handling strategy.
-        return 72.0;
+        throw new IllegalStateException("Temperature data missing from API response");
     }
 
     static double parseHumidity(String json) {
@@ -74,7 +77,8 @@ public class OpenMeteoWeatherProvider implements WeatherDataProvider {
         if (matcher.find()) { // If a match was found, we will return that value, parsed as a double from a string
             return Double.parseDouble(matcher.group(1));
         }
-        return 0.0;
+
+        throw new IllegalStateException("Humidity data missing from API response.");
     }
 
     static double parseWindSpeed(String json) {
@@ -83,7 +87,8 @@ public class OpenMeteoWeatherProvider implements WeatherDataProvider {
         if (matcher.find()) { // If a match was found, we will return that value, parsed as a double from a string
             return Double.parseDouble(matcher.group(1));
         }
-        return 0.0;
+
+        throw new IllegalStateException("Wind speed data missing from API response.");
     }
 }
 
